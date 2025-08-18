@@ -5,7 +5,7 @@ local fs = fs or require("filesystem")
 
 -- RIZER content
 local rizer_content = [[
-OZLE
+
 -- RIZER: simple text editor
 local args = {...}
 if #args < 1 then
