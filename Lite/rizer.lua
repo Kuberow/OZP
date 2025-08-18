@@ -1,13 +1,30 @@
--- OZP Installer: Nano-style RIZER editor (corrected)
-local fs = fs or require("filesystem")
-local term = term or require("term")
+-- RIZER Text Editor Installer
+-- By: YourName
+-- Version: 1.0
 
--- Ensure /bin exists
+local function printHeader()
+    term.clear()
+    term.setCursorPos(1, 1)
+    print("====================================")
+    print("      RIZER Text Editor Installer")
+    print("====================================")
+    print()
+end
 
+local function backupExisting()
+    if fs.exists("rizer") then
+        print("Existing RIZER installation found.")
+        print("Creating backup (rizer.bak)...")
+        fs.copy("rizer", "rizer.bak")
+        print("Backup created successfully.")
+    end
+end
 
--- RIZER content (Nano-style)
-local rizer_content = [[
--- RIZER - A nano-inspired text editor for CC:Tweaked
+local function writeRIZER()
+    print("Installing RIZER text editor...")
+    
+    -- RIZER code embedded as a string
+    local rizerCode = [[-- RIZER - A nano-inspired text editor for CC:Tweaked
 -- By: YourName
 -- Version: 1.0
 
@@ -325,14 +342,76 @@ local function run()
 end
 
 -- Start the editor
-run()
-]]
+run()]]
 
--- Write rizer.lua to /bin
-local path = "/bin/rizer"
-if fs.exists(path) then fs.delete(path) end
-local f = fs.open(path, "w")
-f.write(rizer_content)
-f.close()
+    -- Write the code to file
+    local file = fs.open("rizer", "w")
+    if file then
+        file.write(rizerCode)
+        file.close()
+        print("RIZER installed successfully!")
+        return true
+    else
+        print("ERROR: Failed to create file!")
+        return false
+    end
+end
 
+local function verifyInstallation()
+    print("Verifying installation...")
+    
+    if not fs.exists("rizer") then
+        print("ERROR: RIZER file not found!")
+        return false
+    end
+    
+    local file = fs.open("rizer", "r")
+    if not file then
+        print("ERROR: Unable to open RIZER file!")
+        return false
+    end
+    
+    local content = file.readAll()
+    file.close()
+    
+    -- Simple verification by checking for key content
+    if content:find("RIZER") and content:find("text editor") then
+        print("Installation verified successfully!")
+        return true
+    else
+        print("ERROR: Installation verification failed!")
+        return false
+    end
+end
 
+local function showCompletion()
+    print("\n====================================")
+    print("  Installation completed successfully!")
+    print("====================================")
+    print("\nTo use RIZER:")
+    print("1. Run 'rizer' to start the editor")
+    print("2. Run 'rizer filename' to edit a file")
+    print("\nExample: rizer startup")
+    print("\nKeyboard shortcuts:")
+    print("Ctrl+X - Exit  Ctrl+O - Save")
+    print("Ctrl+W - Save As  Ctrl+R - Open")
+    print("Ctrl+G - Help")
+    print("\nA backup of your previous version")
+    print("was saved as 'rizer.bak' if it existed.")
+end
+
+-- Main installer logic
+printHeader()
+
+backupExisting()
+
+if not writeRIZER() then
+    return
+end
+
+if not verifyInstallation() then
+    print("\nInstallation failed. Please try again.")
+    return
+end
+
+showCompletion()
