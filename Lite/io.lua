@@ -3,7 +3,7 @@ print("Installing file io...")
 local fs = fs or require("filesystem") -- just in case
 
 local files = {
-    ["rm.lua"] = [[
+    ["rm"] = [[
 
 -- remove a file
 local path = ...
@@ -15,7 +15,7 @@ else
     print("File not found: "..path)
 end
 ]],
-    ["cp.lua"] = [[
+    ["cp"] = [[
 
 -- copy a file
 local src, dest = ...
@@ -31,7 +31,7 @@ else
     print("Source not found: "..src)
 end
 ]],
-    ["move.lua"] = [[
+    ["move"] = [[
 
 -- move a file
 local src, dest = ...
@@ -43,7 +43,7 @@ else
     print("Source not found: "..src)
 end
 ]],
-    ["mkdir.lua"] = [[
+    ["mkdir"] = [[
 
 -- make directory
 local path = ...
@@ -55,7 +55,7 @@ else
     print("Directory already exists: "..path)
 end
 ]],
-    ["mkfile.lua"] = [[
+    ["mkfile"] = [[
 
 -- create empty file
 local path = ...
