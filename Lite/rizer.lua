@@ -8,7 +8,7 @@ local term = term or require("term")
 -- RIZER content (Nano-style)
 local rizer_content = [[
 
--- RIZER: Nano-style text editor
+-- RIZER: Nano-style text editor with status bar and space key
 local args = {...}
 if #args < 1 then
     print("Usage: rizer <filename>")
@@ -35,10 +35,15 @@ local scroll = 0
 local function draw()
     term.clear()
     local w, h = term.getSize()
-    for i = 1, math.min(#lines - scroll, h - 1) do
+    for i = 1, math.min(#lines - scroll, h - 2) do
         term.setCursorPos(1, i)
         io.write(lines[i + scroll] or "")
     end
+    -- Status bar at the bottom
+    term.setCursorPos(1, h)
+    io.write(string.rep("-", w))
+    term.setCursorPos(1, h)
+    io.write("RIZER | File: "..filename.." | Line: "..cursorY.." Col: "..cursorX.." | Ctrl+S Save | Ctrl+Q Quit")
     term.setCursorPos(cursorX, cursorY - scroll)
 end
 
@@ -47,6 +52,7 @@ if #lines == 0 then table.insert(lines, "") end
 while true do
     draw()
     local event, key = os.pullEvent("key")
+    
     if key == keys.left and cursorX > 1 then
         cursorX = cursorX - 1
     elseif key == keys.right then
@@ -54,10 +60,12 @@ while true do
     elseif key == keys.up and cursorY > 1 then
         cursorY = cursorY - 1
         if cursorY - scroll < 1 and scroll > 0 then scroll = scroll - 1 end
+        cursorX = math.min(cursorX, #lines[cursorY]+1)
     elseif key == keys.down then
         cursorY = math.min(cursorY + 1, #lines)
         local w, h = term.getSize()
-        if cursorY - scroll > h - 1 then scroll = scroll + 1 end
+        if cursorY - scroll > h - 2 then scroll = scroll + 1 end
+        cursorX = math.min(cursorX, #lines[cursorY]+1)
     elseif key == keys.backspace then
         local line = lines[cursorY]
         if cursorX > 1 then
@@ -77,8 +85,10 @@ while true do
         table.insert(lines, cursorY + 1, newLine)
         cursorY = cursorY + 1
         cursorX = 1
-    elseif key == keys.leftShift or key == keys.rightShift then
-        -- ignore
+    elseif key == keys.space then
+        local line = lines[cursorY]
+        lines[cursorY] = line:sub(1, cursorX-1).." "..line:sub(cursorX)
+        cursorX = cursorX + 1
     elseif key == keys.ctrl then
         local _, subKey = os.pullEvent("key")
         if subKey == keys.s then
