@@ -4,7 +4,7 @@ local fs = fs or require("filesystem") -- just in case
 
 local files = {
     ["rm.lua"] = [[
-OZLE
+
 -- remove a file
 local path = ...
 if not path then print("Usage: rm <path>") return end
@@ -16,7 +16,7 @@ else
 end
 ]],
     ["cp.lua"] = [[
-OZLE
+
 -- copy a file
 local src, dest = ...
 if not src or not dest then print("Usage: cp <source> <dest>") return end
@@ -32,7 +32,7 @@ else
 end
 ]],
     ["move.lua"] = [[
-OZLE
+
 -- move a file
 local src, dest = ...
 if not src or not dest then print("Usage: move <source> <dest>") return end
@@ -44,7 +44,7 @@ else
 end
 ]],
     ["mkdir.lua"] = [[
-OZLE
+
 -- make directory
 local path = ...
 if not path then print("Usage: mkdir <path>") return end
@@ -56,7 +56,7 @@ else
 end
 ]],
     ["mkfile.lua"] = [[
-OZLE
+
 -- create empty file
 local path = ...
 if not path then print("Usage: mkfile <path>") return end
