@@ -7,7 +7,6 @@ local term = term or require("term")
 
 -- RIZER content (Nano-style)
 local rizer_content = [[
-
 -- RIZER: Nano-style text editor with status bar and space key
 local args = {...}
 if #args < 1 then
@@ -33,6 +32,7 @@ local cursorX, cursorY = 1, 1
 local scroll = 0
 
 local function draw()
+    term.setCursorBlink(true)
     term.clear()
     local w, h = term.getSize()
     for i = 1, math.min(#lines - scroll, h - 2) do
