@@ -3,10 +3,7 @@ local fs = fs or require("filesystem")
 local term = term or require("term")
 
 -- Ensure /bin exists
-if not fs.exists("/bin") then
-    fs.makeDir("/bin")
-    print("Created /bin directory")
-end
+
 
 -- RIZER content (Nano-style)
 local rizer_content = [[
@@ -106,11 +103,10 @@ end
 ]]
 
 -- Write rizer.lua to /bin
-local path = "/bin/rizer.lua"
+local path = "/bin/rizer"
 if fs.exists(path) then fs.delete(path) end
 local f = fs.open(path, "w")
 f.write(rizer_content)
 f.close()
 
-print("Nano-style RIZER installed in /bin/rizer.lua! You can now run:")
-print("rizer <filename>")
+
