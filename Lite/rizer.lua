@@ -7,7 +7,7 @@ local term = term or require("term")
 
 -- RIZER content (Nano-style)
 local rizer_content = [[
-OZLE
+
 -- RIZER: Nano-style text editor
 local args = {...}
 if #args < 1 then
