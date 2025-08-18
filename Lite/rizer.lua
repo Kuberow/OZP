@@ -7,109 +7,325 @@ local term = term or require("term")
 
 -- RIZER content (Nano-style)
 local rizer_content = [[
--- RIZER: Nano-style text editor with status bar and space key
+-- RIZER - A nano-inspired text editor for CC:Tweaked
+-- By: YourName
+-- Version: 1.0
+
 local args = {...}
-if #args < 1 then
-    print("Usage: rizer <filename>")
-    return
-end
-
-local filename = args[1]
-local fs = fs or require("filesystem")
-local term = term or require("term")
-
-local lines = {}
-if fs.exists(filename) then
-    local f = fs.open(filename, "r")
-    local content = f.readAll()
-    f.close()
-    for line in string.gmatch(content, "[^\r\n]+") do
-        table.insert(lines, line)
-    end
-end
-
+local filename = args[1] or "newfile.txt"
+local buffer = {}
+local dirty = false
+local running = true
 local cursorX, cursorY = 1, 1
-local scroll = 0
+local offsetX, offsetY = 1, 1
+local termW, termH = term.getSize()
+local statusMsg = ""
+local statusTimer = 0
 
-local function draw()
-    term.setCursorBlink(true)
-    term.clear()
-    local w, h = term.getSize()
-    for i = 1, math.min(#lines - scroll, h - 2) do
-        term.setCursorPos(1, i)
-        io.write(lines[i + scroll] or "")
-    end
-    -- Status bar at the bottom
-    term.setCursorPos(1, h)
-    io.write(string.rep("-", w))
-    term.setCursorPos(1, h)
-    io.write("RIZER | File: "..filename.." | Line: "..cursorY.." Col: "..cursorX.." | Ctrl+S Save | Ctrl+Q Quit")
-    term.setCursorPos(cursorX, cursorY - scroll)
-end
-
-if #lines == 0 then table.insert(lines, "") end
-
-while true do
-    draw()
-    local event, key = os.pullEvent("key")
-    
-    if key == keys.left and cursorX > 1 then
-        cursorX = cursorX - 1
-    elseif key == keys.right then
-        cursorX = cursorX + 1
-    elseif key == keys.up and cursorY > 1 then
-        cursorY = cursorY - 1
-        if cursorY - scroll < 1 and scroll > 0 then scroll = scroll - 1 end
-        cursorX = math.min(cursorX, #lines[cursorY]+1)
-    elseif key == keys.down then
-        cursorY = math.min(cursorY + 1, #lines)
-        local w, h = term.getSize()
-        if cursorY - scroll > h - 2 then scroll = scroll + 1 end
-        cursorX = math.min(cursorX, #lines[cursorY]+1)
-    elseif key == keys.backspace then
-        local line = lines[cursorY]
-        if cursorX > 1 then
-            lines[cursorY] = line:sub(1, cursorX-2)..line:sub(cursorX)
-            cursorX = cursorX - 1
-        elseif cursorY > 1 then
-            local prev = lines[cursorY-1]
-            cursorX = #prev + 1
-            lines[cursorY-1] = prev .. line
-            table.remove(lines, cursorY)
-            cursorY = cursorY - 1
-        end
-    elseif key == keys.enter then
-        local line = lines[cursorY]
-        local newLine = line:sub(cursorX)
-        lines[cursorY] = line:sub(1, cursorX-1)
-        table.insert(lines, cursorY + 1, newLine)
-        cursorY = cursorY + 1
-        cursorX = 1
-    elseif key == keys.space then
-        local line = lines[cursorY]
-        lines[cursorY] = line:sub(1, cursorX-1).." "..line:sub(cursorX)
-        cursorX = cursorX + 1
-    elseif key == keys.ctrl then
-        local _, subKey = os.pullEvent("key")
-        if subKey == keys.s then
-            local f = fs.open(filename, "w")
-            for _, line in ipairs(lines) do
-                f.write(line.."\n")
-            end
-            f.close()
-            print("\nSaved "..filename)
-        elseif subKey == keys.q then
-            break
-        end
+-- Initialize the editor
+local function init()
+  term.clear()
+  term.setCursorPos(1, 1)
+  
+  -- Try to load file if it exists
+  if fs.exists(filename) then
+    local file = io.open(filename, "r")
+    if file then
+      for line in file:lines() do
+        table.insert(buffer, line)
+      end
+      file:close()
+      dirty = false
+      showStatus("Loaded " .. filename)
     else
-        local char = keys.getName(key)
-        if #char == 1 then
-            local line = lines[cursorY]
-            lines[cursorY] = line:sub(1, cursorX-1)..char..line:sub(cursorX)
-            cursorX = cursorX + 1
-        end
+      showStatus("Error opening " .. filename)
     end
+  else
+    buffer = {""}
+    dirty = true
+    showStatus("New File")
+  end
+  
+  -- Ensure buffer has at least one line
+  if #buffer == 0 then
+    buffer = {""}
+  end
 end
+
+-- Show a status message
+local function showStatus(msg)
+  statusMsg = msg
+  statusTimer = 3
+end
+
+-- Draw the editor interface
+local function draw()
+  term.clear()
+  
+  -- Calculate visible area
+  local visibleLines = math.min(termH - 2, #buffer - offsetY + 1)
+  
+  -- Draw buffer content
+  for i = 1, visibleLines do
+    local lineNum = offsetY + i - 1
+    if lineNum <= #buffer then
+      local line = buffer[lineNum]
+      local visibleLine = line:sub(offsetX, offsetX + termW - 1)
+      term.setCursorPos(1, i)
+      term.write(visibleLine)
+    end
+  end
+  
+  -- Draw status bar
+  term.setCursorPos(1, termH)
+  term.setBackgroundColor(colors.gray)
+  term.setTextColor(colors.white)
+  term.write(" File: " .. filename .. " ")
+  term.write(string.rep(" ", termW - #filename - 20))
+  term.write(" Ln " .. cursorY .. ", Col " .. cursorX .. " ")
+  term.setBackgroundColor(colors.black)
+  
+  -- Draw help bar
+  term.setCursorPos(1, termH - 1)
+  term.setBackgroundColor(colors.blue)
+  term.setTextColor(colors.white)
+  term.write("^X Exit  ^O Save  ^W SaveAs  ^R Open  ^G Help")
+  term.setBackgroundColor(colors.black)
+  
+  -- Draw cursor
+  local screenX = cursorX - offsetX + 1
+  local screenY = cursorY - offsetY + 1
+  if screenX >= 1 and screenX <= termW and screenY >= 1 and screenY <= termH - 2 then
+    term.setCursorPos(screenX, screenY)
+    term.setCursorBlink(true)
+  end
+  
+  -- Draw status message if active
+  if statusTimer > 0 then
+    term.setCursorPos(1, termH - 1)
+    term.setBackgroundColor(colors.green)
+    term.setTextColor(colors.black)
+    term.write(" " .. statusMsg .. string.rep(" ", termW - #statusMsg - 1))
+    term.setBackgroundColor(colors.black)
+    statusTimer = statusTimer - 1
+  end
+end
+
+-- Handle key presses
+local function handleKey(key)
+  -- Handle special keys
+  if key == keys.left then
+    if cursorX > 1 then
+      cursorX = cursorX - 1
+    elseif cursorY > 1 then
+      cursorY = cursorY - 1
+      cursorX = #buffer[cursorY] + 1
+    end
+  elseif key == keys.right then
+    if cursorX <= #buffer[cursorY] then
+      cursorX = cursorX + 1
+    elseif cursorY < #buffer then
+      cursorY = cursorY + 1
+      cursorX = 1
+    end
+  elseif key == keys.up then
+    if cursorY > 1 then
+      cursorY = cursorY - 1
+      if cursorX > #buffer[cursorY] then
+        cursorX = #buffer[cursorY] + 1
+      end
+    end
+  elseif key == keys.down then
+    if cursorY < #buffer then
+      cursorY = cursorY + 1
+      if cursorX > #buffer[cursorY] then
+        cursorX = #buffer[cursorY] + 1
+      end
+    end
+  elseif key == keys.backspace then
+    if cursorX > 1 then
+      buffer[cursorY] = buffer[cursorY]:sub(1, cursorX - 2) .. buffer[cursorY]:sub(cursorX)
+      cursorX = cursorX - 1
+      dirty = true
+    elseif cursorY > 1 then
+      local prevLine = buffer[cursorY - 1]
+      buffer[cursorY - 1] = prevLine .. buffer[cursorY]
+      table.remove(buffer, cursorY)
+      cursorY = cursorY - 1
+      cursorX = #prevLine + 1
+      dirty = true
+    end
+  elseif key == keys.enter then
+    local line = buffer[cursorY]
+    buffer[cursorY] = line:sub(1, cursorX - 1)
+    table.insert(buffer, cursorY + 1, line:sub(cursorX))
+    cursorY = cursorY + 1
+    cursorX = 1
+    dirty = true
+  elseif key == keys.home then
+    cursorX = 1
+  elseif key == keys["end"] then
+    cursorX = #buffer[cursorY] + 1
+  end
+  
+  -- Update view if cursor is out of bounds
+  if cursorX < offsetX then
+    offsetX = cursorX
+  elseif cursorX > offsetX + termW - 1 then
+    offsetX = cursorX - termW + 1
+  end
+  
+  if cursorY < offsetY then
+    offsetY = cursorY
+  elseif cursorY > offsetY + termH - 3 then
+    offsetY = cursorY - termH + 3
+  end
+end
+
+-- Handle character input
+local function handleChar(char)
+  local line = buffer[cursorY]
+  buffer[cursorY] = line:sub(1, cursorX - 1) .. char .. line:sub(cursorX)
+  cursorX = cursorX + 1
+  dirty = true
+end
+
+-- Save the current file
+local function saveFile(newName)
+  local saveName = newName or filename
+  local file = io.open(saveName, "w")
+  if file then
+    for _, line in ipairs(buffer) do
+      file:write(line .. "\n")
+    end
+    file:close()
+    dirty = false
+    filename = saveName
+    showStatus("Saved as " .. saveName)
+    return true
+  else
+    showStatus("Error saving " .. saveName)
+    return false
+  end
+end
+
+-- Open a file
+local function openFile(newName)
+  if dirty then
+    showStatus("Save changes first (Ctrl+O)")
+    return
+  end
+  
+  if fs.exists(newName) then
+    local file = io.open(newName, "r")
+    if file then
+      buffer = {}
+      for line in file:lines() do
+        table.insert(buffer, line)
+      end
+      file:close()
+      filename = newName
+      dirty = false
+      cursorX, cursorY = 1, 1
+      offsetX, offsetY = 1, 1
+      showStatus("Opened " .. newName)
+    else
+      showStatus("Error opening " .. newName)
+    end
+  else
+    showStatus("File not found: " .. newName)
+  end
+end
+
+-- Show help
+local function showHelp()
+  local helpText = [[
+RIZER Text Editor Help
+Navigation:
+  Arrow Keys: Move cursor
+  Home/End: Start/End of line
+  Backspace: Delete character
+  Enter: New line
+
+Commands:
+  Ctrl+X: Exit editor
+  Ctrl+O: Save file
+  Ctrl+W: Save as new file
+  Ctrl+R: Open file
+  Ctrl+G: Show this help
+
+Press any key to return to editor
+]]
+  
+  term.clear()
+  term.setCursorPos(1, 1)
+  term.write(helpText)
+  
+  local event = os.pullEvent("key")
+  -- Return to editor after any key press
+end
+
+-- Main editor loop
+local function run()
+  init()
+  
+  while running do
+    draw()
+    
+    local event, p1, p2, p3 = os.pullEvent()
+    
+    if event == "key" then
+      if p1 == keys.x and ctrl then  -- Ctrl+X: Exit
+        if dirty then
+          showStatus("Save changes first (Ctrl+O)")
+        else
+          running = false
+        end
+      elseif p1 == keys.o and ctrl then  -- Ctrl+O: Save
+        saveFile()
+      elseif p1 == keys.w and ctrl then  -- Ctrl+W: Save As
+        term.setCursorPos(1, termH - 1)
+        term.setBackgroundColor(colors.gray)
+        term.write("Save as: ")
+        term.setBackgroundColor(colors.black)
+        local newName = read()
+        if newName ~= "" then
+          saveFile(newName)
+        end
+      elseif p1 == keys.r and ctrl then  -- Ctrl+R: Open
+        term.setCursorPos(1, termH - 1)
+        term.setBackgroundColor(colors.gray)
+        term.write("Open file: ")
+        term.setBackgroundColor(colors.black)
+        local newName = read()
+        if newName ~= "" then
+          openFile(newName)
+        end
+      elseif p1 == keys.g and ctrl then  -- Ctrl+G: Help
+        showHelp()
+      else
+        handleKey(p1)
+      end
+    elseif event == "char" then
+      handleChar(p1)
+    elseif event == "key_up" then
+      if p1 == keys.leftCtrl or p1 == keys.rightCtrl then
+        ctrl = false
+      end
+    elseif event == "key_down" then
+      if p1 == keys.leftCtrl or p1 == keys.rightCtrl then
+        ctrl = true
+      end
+    end
+  end
+  
+  term.clear()
+  term.setCursorPos(1, 1)
+  print("Thank you for using RIZER!")
+end
+
+-- Start the editor
+run()
 ]]
 
 -- Write rizer.lua to /bin
