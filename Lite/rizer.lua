@@ -1,4 +1,4 @@
--- RIZER Text Editor Installer
+-- RIZER Text Editor Installer (No Help Version)
 -- By: YourName
 -- Version: 1.0
 
@@ -23,7 +23,7 @@ end
 local function writeRIZER()
     print("Installing RIZER text editor...")
     
-    -- RIZER code embedded as a string
+    -- RIZER code embedded as a string (without help functionality)
     local rizerCode = [[-- RIZER - A nano-inspired text editor for CC:Tweaked
 -- By: YourName
 -- Version: 1.0
@@ -106,7 +106,7 @@ local function draw()
   term.setCursorPos(1, termH - 1)
   term.setBackgroundColor(colors.blue)
   term.setTextColor(colors.white)
-  term.write("^X Exit  ^O Save  ^W SaveAs  ^R Open  ^G Help")
+  term.write("^X Exit  ^O Save  ^W SaveAs  ^R Open")
   term.setBackgroundColor(colors.black)
   
   -- Draw cursor
@@ -254,34 +254,6 @@ local function openFile(newName)
   end
 end
 
--- Show help
-local function showHelp()
-  local helpText = [[
-RIZER Text Editor Help
-Navigation:
-  Arrow Keys: Move cursor
-  Home/End: Start/End of line
-  Backspace: Delete character
-  Enter: New line
-
-Commands:
-  Ctrl+X: Exit editor
-  Ctrl+O: Save file
-  Ctrl+W: Save as new file
-  Ctrl+R: Open file
-  Ctrl+G: Show this help
-
-Press any key to return to editor
-]]
-  
-  term.clear()
-  term.setCursorPos(1, 1)
-  term.write(helpText)
-  
-  local event = os.pullEvent("key")
-  -- Return to editor after any key press
-end
-
 -- Main editor loop
 local function run()
   init()
@@ -318,8 +290,6 @@ local function run()
         if newName ~= "" then
           openFile(newName)
         end
-      elseif p1 == keys.g and ctrl then  -- Ctrl+G: Help
-        showHelp()
       else
         handleKey(p1)
       end
@@ -395,7 +365,6 @@ local function showCompletion()
     print("\nKeyboard shortcuts:")
     print("Ctrl+X - Exit  Ctrl+O - Save")
     print("Ctrl+W - Save As  Ctrl+R - Open")
-    print("Ctrl+G - Help")
     print("\nA backup of your previous version")
     print("was saved as 'rizer.bak' if it existed.")
 end
