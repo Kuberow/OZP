@@ -1,14 +1,16 @@
--- OZP Installer: Nano-style RIZER editor
-
+-- OZP Installer: Nano-style RIZER editor (corrected)
 local fs = fs or require("filesystem")
 local term = term or require("term")
 
 -- Ensure /bin exists
-
+if not fs.exists("/bin") then
+    fs.makeDir("/bin")
+    print("Created /bin directory")
+end
 
 -- RIZER content (Nano-style)
 local rizer_content = [[
-
+OZLE
 -- RIZER: Nano-style text editor
 local args = {...}
 if #args < 1 then
@@ -37,10 +39,10 @@ local function draw()
     term.clear()
     local w, h = term.getSize()
     for i = 1, math.min(#lines - scroll, h - 1) do
-        term.setCursor(1, i)
+        term.setCursorPos(1, i)
         io.write(lines[i + scroll] or "")
     end
-    term.setCursor(cursorX, cursorY - scroll)
+    term.setCursorPos(cursorX, cursorY - scroll)
 end
 
 if #lines == 0 then table.insert(lines, "") end
@@ -104,9 +106,11 @@ end
 ]]
 
 -- Write rizer.lua to /bin
-local path = "/bin/rizer"
+local path = "/bin/rizer.lua"
 if fs.exists(path) then fs.delete(path) end
 local f = fs.open(path, "w")
 f.write(rizer_content)
 f.close()
 
+print("Nano-style RIZER installed in /bin/rizer.lua! You can now run:")
+print("rizer <filename>")
