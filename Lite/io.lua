@@ -69,6 +69,18 @@ else
     print("File already exists: "..path)
 end
 ]],
+    ["ls"] = [[
+local files = fs.list(".")
+for _, f in ipairs(files) do
+    if not fs.isDir(f) then
+    print(f)
+    else
+    term.setTextColor(colors.purple)
+    print(f)
+    term.setTextColor(color.white)
+end 
+end
+]],
 }
 
 -- Ensure /bin exists
