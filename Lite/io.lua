@@ -77,7 +77,7 @@ for _, f in ipairs(files) do
     else
     term.setTextColor(colors.purple)
     print(f)
-    term.setTextColor(color.white)
+    term.setTextColor(colors.white)
 end 
 end
 ]],
